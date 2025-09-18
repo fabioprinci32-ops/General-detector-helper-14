@@ -56,6 +56,7 @@
       <strong>Seleziona modalità</strong>
       <button id="btn-record" class="primary">● Registra</button>
       <button id="btn-listen">▶︎ Ascolta (riconoscimento)</button>
+      <button id="btn-stop">■ Stop</button>
       <span class="spacer"></span>
       <span><span id="live-dot" class="dot"></span><small class="hint">stato</small></span>
     </section>
@@ -157,7 +158,47 @@
     const MAX_SHIFT = 8;
     const library = [];
 
-    const btnRecord = document.getElementById('btn-record');
+    
+const btnStop = document.getElementById('btn-stop');
+
+function stopAll() {
+  if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch(_) {}
+  }
+  setLive(false);
+  runningMode = null;
+  btnRecord.disabled = false; 
+  btnListen.disabled = false;
+  btnListen.textContent = '▶︎ Ascolta (riconoscimento)';
+  btnRecord.textContent = '● Registra';
+}
+
+btnListen.addEventListener('click', async ()=>{
+  if (runningMode === 'listen') {
+    stopAll();
+    return;
+  }
+  setMode('listen');
+  btnListen.textContent = '⏸️ Ferma ascolto';
+  try { await startListen(); } catch (e) { console.error(e); alert('Accesso microfono negato o non disponibile.'); stopAll(); }
+});
+
+btnRecord.addEventListener('click', async ()=>{
+  if (runningMode === 'record') {
+    stopAll();
+    return;
+  }
+  if (runningMode === 'listen') return;
+  setMode('record');
+  btnRecord.textContent = '⏸️ Ferma registrazione';
+  try { await startRecord(); } catch (e) { console.error(e); alert('Accesso microfono negato o non disponibile.'); stopAll(); }
+});
+
+btnStop.addEventListener('click', ()=>{ stopAll(); });
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) stopAll(); });
+
+const btnRecord = document.getElementById('btn-record');
     const btnListen = document.getElementById('btn-listen');
     const liveDot = document.getElementById('live-dot');
     const scope = document.getElementById('scope');
