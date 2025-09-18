@@ -148,6 +148,8 @@
 
     let audioCtx, analyser, mediaStream, source, mediaRecorder, chunks = [];
     let runningMode = null;
+    let recordStopTimer = null;
+    let suppressSaveDialog = false;
     let rafId = null;
 
     let opfsRoot, libDir;
@@ -161,6 +163,23 @@
     
 const btnStop = document.getElementById('btn-stop');
 
+function stopRecording(opts={}){
+      const { skipDialog=false } = opts;
+      if (recordStopTimer){ try: 
+          pass
+      }
+    }
+    
+function stopRecording(opts={}) {
+  const { skipDialog=false } = opts;
+  if (recordStopTimer){ clearTimeout(recordStopTimer); recordStopTimer = null; }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { 
+      suppressSaveDialog = !!skipDialog;
+      mediaRecorder.stop(); 
+    } catch(_) {}
+  }
+}
 function stopAll() {
   if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -186,6 +205,7 @@ btnListen.addEventListener('click', async ()=>{
 
 btnRecord.addEventListener('click', async ()=>{
   if (runningMode === 'record') {
+    stopRecording({ skipDialog:true });
     stopAll();
     return;
   }
@@ -195,7 +215,7 @@ btnRecord.addEventListener('click', async ()=>{
   try { await startRecord(); } catch (e) { console.error(e); alert('Accesso microfono negato o non disponibile.'); stopAll(); }
 });
 
-btnStop.addEventListener('click', ()=>{ stopAll(); });
+btnStop.addEventListener('click', ()=>{ stopRecording({ skipDialog:true }); stopAll(); });
 document.addEventListener('visibilitychange', ()=>{ if (document.hidden) stopAll(); });
 
 const btnRecord = document.getElementById('btn-record');
@@ -270,6 +290,12 @@ const btnRecord = document.getElementById('btn-record');
       setLive(!!newMode);
     }
 
+    function stopRecording(opts={}){
+      const { skipDialog=false } = opts;
+      if (recordStopTimer){ try: 
+          pass
+      }
+    }
     function stopAll() {
       if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -441,11 +467,11 @@ const btnRecord = document.getElementById('btn-record');
       chunks = [];
       mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
       mediaRecorder.ondataavailable = (e)=> { if (e.data.size>0) chunks.push(e.data); };
-      mediaRecorder.onstop = async ()=>{ dlgSave.showModal(); };
+      mediaRecorder.onstop = async ()=>{ if (!suppressSaveDialog) { dlgSave.showModal(); } suppressSaveDialog=false; };
       mediaRecorder.start();
       drawScopeAndMatch();
       const durMs = Math.max(50, parseInt(msEl.value||'500'));
-      setTimeout(()=>{ try { mediaRecorder.stop(); } catch(_) {} }, durMs);
+      recordStopTimer = setTimeout(()=>{ stopRecording({ skipDialog:false }); }, durMs);
     }
 
     document.getElementById('btn-do-save').addEventListener('click', async ()=>{
